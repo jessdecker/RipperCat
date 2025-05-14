@@ -5,7 +5,7 @@ namespace RipperCat.Models;
 internal sealed class Mp3Sink(System.IO.Stream fs) : IAudioSink
 {
     private readonly NAudio.Lame.LameMP3FileWriter _mp3 = new(
-        fs, new NAudio.Wave.WaveFormat(48_000, 16, 2), 192_000);
+        fs, new NAudio.Wave.WaveFormat(48_000, 16, 2), 256_000);
 
     public void Write(short[] pcm)
     {
