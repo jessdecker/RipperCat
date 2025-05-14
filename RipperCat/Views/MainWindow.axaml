@@ -2,12 +2,18 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="RipperCat.Views.MainWindow"
-        Width="460" Height="260"
+        Width="460" Height="400"
         Title="RipperCat">
 
     <StackPanel Margin="20" Spacing="12">
         <TextBlock Text="Input device:" />
         <ComboBox x:Name="DeviceCombo" Width="400" IsEnabled="True"/>
+        
+        <TextBlock Text="Output format:" />
+        <ComboBox x:Name="FormatCombo" Width="200" SelectedIndex="1">
+            <ComboBoxItem Content="Opus (.opus)" Tag="Opus"/>
+            <ComboBoxItem Content="MP3  (.mp3)"  Tag="Mp3"/>
+        </ComboBox>
 
         <TextBlock Text="Output file:" />
         <TextBox x:Name="PathBox" Width="400" IsReadOnly="True" />
@@ -19,6 +25,6 @@
             <Button x:Name="StopButton"  Content="Stop"  Width="120" IsEnabled="False"/>
         </StackPanel>
 
-        <TextBlock x:Name="StatusText" />
+        <TextBlock x:Name="StatusText" Text="Welcome To RipperCat" />
     </StackPanel>
 </Window>

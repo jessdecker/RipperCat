@@ -1,6 +1,6 @@
 # RipperCat
 
-A simple tool to capture the audio you're listening to.
+A simple tool to capture the audio you're listening to. It's setup to capture a 192k cbr opus audio file.
 
 ## Notes
 Only tested with Blackhole audio loopback for Mac, but should work well on Windows and Linux with other audio loopback virtual devices.

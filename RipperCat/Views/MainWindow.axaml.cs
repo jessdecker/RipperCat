@@ -1,12 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using RipperCat.Models;
 
 namespace RipperCat.Views;
 
@@ -20,71 +20,93 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Loaded          += OnLoaded;
+        Loaded += (_, _) => DeviceCombo.ItemsSource = _recorder.ListInputDevices();
 
-        BrowseButton.Click += OnBrowseClicked;
-        StartButton.Click  += OnStartClicked;
+        BrowseButton.Click += BrowseAsync;
+        StartButton.Click  += StartAsync;
         BreakButton.Click  += (_, _) => _recorder.RequestSongBreak();
         StopButton.Click   += (_, _) => _cts?.Cancel();
     }
 
-    // ---------- FIX 1: use ItemsSource instead of Items -------------
-    private void OnLoaded(object? sender, EventArgs e) =>
-        DeviceCombo.ItemsSource = _recorder.ListInputDevices();   // ✅ no Clear/Add needed
-
-    // ---------------------------------------------------------------
-    private async void OnBrowseClicked(object? sender, RoutedEventArgs e)
+    private async void BrowseAsync(object? s, RoutedEventArgs e)
     {
-        var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var fmt = SelectedFormat();
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            SuggestedFileName = "album",
-            FileTypeChoices   = new[] { new FilePickerFileType("Opus audio") { Patterns = new[] { "*.opus" } } }
+            SuggestedFileName = "session",
+            FileTypeChoices = new[] { new FilePickerFileType(fmt == AudioFormat.Opus ? "Opus audio" : "MP3 audio")
+                { Patterns = new[] { fmt == AudioFormat.Opus ? "*.opus" : "*.mp3" } } }
+
         });
-        if (save != null)
+        if (file != null)
         {
-            _basePath = Path.Combine(
-                Path.GetDirectoryName(save.Path.LocalPath)!,
-                Path.GetFileNameWithoutExtension(save.Path.LocalPath));
+            _basePath = Path.Combine(Path.GetDirectoryName(file.Path.LocalPath)!,
+                                      Path.GetFileNameWithoutExtension(file.Path.LocalPath));
             PathBox.Text = _basePath;
         }
     }
 
-    private async void OnStartClicked(object? s, RoutedEventArgs e)
+    private async void StartAsync(object? s, RoutedEventArgs e)
     {
         if (DeviceCombo.SelectedItem is not AudioRecorder.AudioDeviceInfo dev) return;
         if (string.IsNullOrWhiteSpace(_basePath))
         {
-            await ShowMessage("Choose a base output file first.");   // ✅ FIX 2: ShowMessage restored
+            await ShowMessage("Choose a base output file first.");
             return;
         }
+
+        // ✅ read once on UI thread
+        var format = SelectedFormat();         
 
         ToggleButtons(true);
         _fileIndex = 0;
         StatusText.Text = "Recording 1…";
 
         _cts = new CancellationTokenSource();
-        _ = Task.Run(() => _recorder.RecordContinuously(dev, NextPath, _cts.Token))
-                .ContinueWith(_ => Dispatcher.UIThread.Post(() => ToggleButtons(false)));
+
+        // pass captured 'format' and a next-path factory that uses *only* local data
+        _ = Task.Run(() =>
+                _recorder.RecordContinuously(
+                    dev,
+                    NextPathLocal,          // ← no UI access inside
+                    format,
+                    _cts.Token))
+            .ContinueWith(_ => Dispatcher.UIThread.Post(() => ToggleButtons(false)));
+
+        string NextPathLocal()
+        {
+            _fileIndex++;
+            var ext = format == AudioFormat.Opus ? ".opus" : ".mp3";
+            var path = $"{_basePath}_{_fileIndex}{ext}";
+            Dispatcher.UIThread.Post(() => StatusText.Text = $"Recording {_fileIndex}…");
+            return path;
+        }
     }
+
 
     private string NextPath()
     {
         _fileIndex++;
-        var path = $"{_basePath}_{_fileIndex}.opus";
+        var ext = SelectedFormat() == AudioFormat.Opus ? ".opus" : ".mp3";
+        var path = $"{_basePath}_{_fileIndex}{ext}";
         Dispatcher.UIThread.Post(() => StatusText.Text = $"Recording {_fileIndex}…");
         return path;
     }
 
-    private void ToggleButtons(bool recording)
+    private void ToggleButtons(bool rec)
     {
-        StartButton.IsEnabled  = !recording;
-        StopButton.IsEnabled   = BreakButton.IsEnabled = recording;
-        if (!recording) StatusText.Text = "Ready";
+        StartButton.IsEnabled  = !rec;
+        StopButton.IsEnabled   = BreakButton.IsEnabled = rec;
+        if (!rec) StatusText.Text = "Ready";
     }
 
-    // ---------- FIX 2: MessageBox helper back ----------------------
+    private AudioFormat SelectedFormat() =>
+        (FormatCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Mp3"
+            ? AudioFormat.Mp3
+            : AudioFormat.Opus;
+    
     private async Task ShowMessage(string msg) => await MessageBox(msg);
-
+    
     private async Task MessageBox(string msg)
     {
         await new Window
@@ -96,4 +118,5 @@ public sealed partial class MainWindow : Window
             CanResize = false
         }.ShowDialog(this);
     }
+    
 }

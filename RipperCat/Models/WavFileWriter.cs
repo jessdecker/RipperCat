@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Text;
 
+namespace RipperCat.Models;
+
 public sealed class WavFileWriter : IDisposable
 {
     private readonly FileStream _fs;
