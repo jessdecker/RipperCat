@@ -1,5 +1,7 @@
 RipperCat
 
+A simple tool to capture the audio you're listening to.
+
 Notes
 Only tested with Blackhole audio loopback for Mac, but should work well on Windows and Linux with other audio loopback virtual devices.
 
