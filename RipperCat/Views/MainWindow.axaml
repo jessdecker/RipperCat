@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="RipperCat.Views.MainWindow"
         Width="460" Height="260"
-        Title="Rip Cat">
+        Title="RipperCat">
 
     <StackPanel Margin="20" Spacing="12">
         <TextBlock Text="Input device:" />
